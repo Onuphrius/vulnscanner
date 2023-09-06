@@ -5,8 +5,7 @@ name = "binmaster"
 ports = "6969"
 range = ["google_cloud_all"]
 param = "--max-rate 1000000 --banners"
-
-
+max_result = 100
 def execute(result):
     try:
         ip = result
