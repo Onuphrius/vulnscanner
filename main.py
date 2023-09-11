@@ -2,9 +2,9 @@ import time
 import json
 import masscan
 import scan_all
+import warnings
 from colorama import init, Fore
 from pymongo import MongoClient
-
 def read_json(filename):
     with open(filename, "r") as file:
         return json.load(file)
@@ -26,13 +26,14 @@ def load_ip_ranges(config):
 
 def main():
     init()
+    warnings.filterwarnings("ignore")
     config = read_json("config.json")
     ip_ranges = load_ip_ranges(config)
 
     mongodb = MongoClient(config["mongodb"])
     db = mongodb[config["db"]]
     collection = db[config["collection"]]
-
+    scan_collection = db[config["scan_collection"]]
     start_at = config["start"]
     global_start = time.time()
 
@@ -65,6 +66,10 @@ def main():
 
             end_time = time.time()
             diff_time = round(end_time - start_time)
+            if diff_time < 10:
+                print(f"{Fore.RED}No Internet Connection Waiting for 60 Seconds...{Fore.RESET}")
+                time.sleep(60)
+                main()
             global_start += diff_time
             total_time = round((global_start / (start_at + 1)) * (len(ip_ranges) - start_at))
 
@@ -80,6 +85,7 @@ def main():
         except Exception as e:
             input(e)
 
+        scan_collection.insert_one({"index": start_at, "range": ip_range, "time": diff_time, "ips": num})
         start_at += 1
         config["start"] = start_at
         save_json("config.json", config)
